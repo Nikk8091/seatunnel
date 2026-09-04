@@ -17,15 +17,56 @@
 
 package org.apache.seatunnel.connectors.seatunnel;
 
+import org.apache.seatunnel.api.configuration.ReadonlyConfig;
+import org.apache.seatunnel.api.configuration.util.ConfigValidator;
+import org.apache.seatunnel.api.configuration.util.OptionRule;
+import org.apache.seatunnel.api.configuration.util.OptionValidationException;
+import org.apache.seatunnel.connectors.seatunnel.config.DingTalkSinkOptions;
 import org.apache.seatunnel.connectors.seatunnel.sink.DingTalkSinkFactory;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class DingTalkFactoryTest {
+
+    private final OptionRule optionRule = new DingTalkSinkFactory().optionRule();
 
     @Test
     void optionRule() {
-        Assertions.assertNotNull((new DingTalkSinkFactory()).optionRule());
+        Assertions.assertNotNull(optionRule);
+    }
+
+    @Test
+    void testValidRequiredOptions() {
+        Assertions.assertDoesNotThrow(() -> validate(requiredConfig()));
+    }
+
+    @Test
+    void testBlankRequiredOptionsRejected() {
+        Map<String, Object> blankUrlConfig = requiredConfig();
+        blankUrlConfig.put(DingTalkSinkOptions.URL.key(), " ");
+        Assertions.assertThrows(OptionValidationException.class, () -> validate(blankUrlConfig));
+
+        Map<String, Object> blankSecretConfig = requiredConfig();
+        blankSecretConfig.put(DingTalkSinkOptions.SECRET.key(), "\t");
+        Assertions.assertThrows(OptionValidationException.class, () -> validate(blankSecretConfig));
+    }
+
+    private void validate(Map<String, Object> config) {
+        ReadonlyConfig readonlyConfig = ReadonlyConfig.fromMap(config);
+        ConfigValidator.validateUnknownKeys(readonlyConfig, optionRule, "DingTalkSink");
+        ConfigValidator.of(readonlyConfig).validate(optionRule);
+    }
+
+    private Map<String, Object> requiredConfig() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(
+                DingTalkSinkOptions.URL.key(),
+                "https://oapi.dingtalk.com/robot/send?access_token=test-token");
+        config.put(DingTalkSinkOptions.SECRET.key(), "test-secret");
+        return config;
     }
 }
